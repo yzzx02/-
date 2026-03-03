@@ -807,6 +807,80 @@ def plot_all_unsaturations(category_data, category_name, output_dir):
     plt.savefig(os.path.join(output_dir, safe_filename2))
     plt.close()
 
+def plot_single_unsaturation_group(x, y, category_name, unsat_int, output_dir):
+    """
+    为单个(类别, 不饱和度)组合绘制独立图表。
+
+    标题格式：将类别名末尾的 ')' 替换为 ':X:{unsat_int})'
+    例如：CAEP(d14:4) + 不饱和度0 -> 标题 CAEP(d14:4:X:0)
+
+    参数:
+        x: 总碳数数组
+        y: 保留时间数组
+        category_name: 类别名称，如 'CAEP(d14:4)'
+        unsat_int: 不饱和度整数值
+        output_dir: 输出目录
+    """
+    set_plot_style()
+
+    # 构造标题
+    if category_name.endswith(')'):
+        title = category_name[:-1] + f':X:{unsat_int})'
+    else:
+        title = f'{category_name}:X:{unsat_int}'
+
+    # 拟合数据
+    r2, fit_type, params, x_fit, y_fit, _ = fit_retention_time_curvefit_no_plot(
+        x, y, unsat_int, color=colors[0]
+    )
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    ax.tick_params(axis='both', which='both', direction='out', colors='black', labelsize=14, length=6, width=1.5)
+
+    # 绘制原始数据点（半透明虚点）
+    ax.scatter(x, y, color=colors[0], alpha=0.25, s=80, edgecolors='none', label='_nolegend_')
+
+    # 绘制拟合使用的数据点（实点）
+    if x_fit is not None and y_fit is not None:
+        ax.scatter(x_fit, y_fit, color=colors[0], alpha=1.0, s=100, edgecolors='none', label=f'{unsat_int}')
+
+    # 绘制拟合曲线（若拟合成功）
+    if fit_type and params is not None and r2 >= 0.99 and x_fit is not None:
+        x_curve = np.linspace(min(x_fit), max(x_fit), 100)
+        draw_curve = False
+        if 'Linear' in fit_type and len(params) == 2 and params[0] >= 0:
+            y_curve = linear_func(x_curve, *params)
+            draw_curve = True
+        elif 'Quadratic' in fit_type and len(params) == 3:
+            a, b, c = params
+            draw_curve = True
+            if abs(a) > 1e-8:
+                vertex_x = -b / (2 * a)
+                if min(x_fit) <= vertex_x <= max(x_fit):
+                    draw_curve = False
+            if draw_curve:
+                y_curve = quad_func(x_curve, *params)
+        if draw_curve:
+            ax.plot(x_curve, y_curve, color=colors[0], linestyle=(0, (2.0, 3.0)), linewidth=2.0, label='_nolegend_')
+
+    ax.set_xlabel('Carbon Number', fontweight='bold', fontsize=16)
+    ax.set_ylabel('$t_R$ (min)', fontweight='bold', fontsize=16)
+    ax.set_title(title, fontweight='bold', fontsize=18)
+
+    for tick in ax.get_xticklabels() + ax.get_yticklabels():
+        tick.set_fontweight('bold')
+
+    plt.tight_layout()
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    safe_filename = sanitize_filename(f'{category_name}_{unsat_int}_single.png')
+    plt.savefig(os.path.join(output_dir, safe_filename))
+    plt.close()
+
+
 def rename_dataframe_columns_to_english(df):
     """
     将中文列名重命名为英文，以增强兼容性

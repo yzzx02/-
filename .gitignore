@@ -1,3 +1,5 @@
 拟合结果1/
 *.png
 .venv/
+__pycache__/
+*.pyc

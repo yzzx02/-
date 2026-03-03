@@ -24,7 +24,8 @@ try:
     from rt_fitting import (
         set_plot_style, 
         fit_retention_time_curvefit, 
-        plot_all_unsaturations
+        plot_all_unsaturations,
+        plot_single_unsaturation_group
     )
 except ImportError as e:
     print(f"错误: 缺少必要的依赖包: {str(e)}")
@@ -174,6 +175,8 @@ def main():
                 if len(x) <= 2:
                     print(f"  跳过拟合，数据点数量不足（至少需要3个点）")
                     continue
+                # 为该(分类, 不饱和度)组合生成单独图表
+                plot_single_unsaturation_group(x, y, category, unsat_int, output_dir)
                 # 调用拟合函数（默认不生成单图）
                 r2, fit_type, params, isomer_info = fit_retention_time_curvefit(x, y, category, unsat, output_dir)
                 if fit_type is None:
